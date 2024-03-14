@@ -1,0 +1,262 @@
+출처 https://rpubs.com/kimwoohyung/ggplot2
+
+library(ggplot2)
+library(plyr)
+library(reshape2)
+library(gcookbook)
+
+
+#mtcars 데이터셋의 무게(wt)를 x축으로 연비(mpg)를 y축으로 하는 산점도 그리기
+#무게가 증가할수록 연비가 감소한다
+qplot(mtcars$wt, mtcars$mpg)
+
+ggplot(mtcars, aes(x = wt, y = mpg)) + geom_point()
+
+--------------------------------------------------------------------------------------------------
+
+[야구선수 평균 타율(색상은 선수들이 속한 리그)]
+
+tophit <- tophitters2001[1:25,]
+tophit <- tophit[,c("name", "lg", "avg")]
+
+# y축 이산형 그래프 
+ggplot(tophit, aes(x = avg, y = name, col=lg)) + geom_point()
+
+--------------------------------------------------------------------------------------------------
+
+# 그래프 정렬하기 & 그래프 격자 없애기 & 수평선 점선으로 바꾸기
+ggplot(tophit, aes(x = avg, y = reorder(name, avg))) + geom_point(size = 3) + theme_bw() + 
+  theme(panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_line(color = "grey60", linetype = "dashed"))
+
+--------------------------------------------------------------------------------------------------
+
+# x, y축 바꿔서 그치기 & 그래프 격자 없애기 & 수직선 점선으로 바꾸기 & X축 값 정의 및 회전
+ggplot(tophit, aes(x = reorder(name, avg), y = avg)) + geom_point(size = 3) + theme_bw() + 
+  theme(axis.text.x = element_text(angle = 60, hjust = 1),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        panel.grid.major.x = element_line(color = "grey60", linetype = "dashed"))
+
+--------------------------------------------------------------------------------------------------
+
+# 두개 변수로 정의하여 그리기
+nameorder <- tophit$name[order(tophit$lg, tophit$avg)]
+tophit$name <- factor(tophit$name, levels = nameorder)
+
+# 격자 선이 그래프의 끝에서 끝까지 횡단하지 않고, 점까지만 가도록 표현 [ geom_segment ]
+ggplot(tophit, aes(x = avg, y = name)) + 
+  geom_segment(aes(yend = name), xend = 0, color = "grey50") + geom_point(size = 3, aes(color = lg)) + 
+  scale_color_brewer(palette = "Set1", limits = c("NL", "AL")) + theme_bw() + 
+  theme(panel.grid.major.y = element_blank(), legend.position = c(1, 0.55), # 범례를 그래프 안쪽으로 옮김 
+        legend.justification = c(1, 0.5))
+
+--------------------------------------------------------------------------------------------------
+
+# 그룹 별 그래프 분할 
+ggplot(tophit, aes(x = avg, y = name)) + 
+  geom_segment(aes(yend = name), xend = 0, color = "grey50") + geom_point(size = 5, aes(color = lg)) + 
+  scale_color_brewer(palette = "Set1", limits = c("NL", "AL"), guide = FALSE) + theme_bw() + 
+  theme(panel.grid.major.y = element_blank()) + facet_grid(lg ~ ., scales = "free_y", space = "free_y") 
+
+--------------------------------------------------------------------------------------------------
+
+[나이와 키 사이의 관계 산점도(성별은 색상으로 구분)]
+ 
+# 그룹 별 데이터 구별
+# 색상기준
+ggplot(heightweight, aes(x = ageYear, y = heightIn, color = sex)) + geom_point()
+
+--------------------------------------------------------------------------------------------------
+
+# 점 모양 기준
+ggplot(heightweight, aes(x = ageYear, y = heightIn, shape = sex)) + geom_point()
+
+--------------------------------------------------------------------------------------------------
+
+# 점 모양에 색상 부여하기
+ggplot(heightweight, aes(x = ageYear, y = heightIn, color = sex, shape = sex)) + geom_point() +
+  scale_shape_manual(values = c(1,2)) + scale_color_brewer(palette = "Set1")
+
+--------------------------------------------------------------------------------------------------
+
+#점 모양 변경2
+ggplot(heightweight, aes(x = ageYear, y = heightIn, color = sex, shape = sex)) + geom_point() +
+  scale_shape_manual(values = c(3,2)) + scale_color_brewer(palette = "Set1")
+
+--------------------------------------------------------------------------------------------------
+
+[시간에 따른 닭의 체중 시각화]
+# 기준 정의에 따라 구별
+hw <-heightweight
+hw$weightGroup <- cut(hw$weightLb, breaks = c(-Inf, 100, Inf), labels = c("< 100", ">= 100"))
+
+# x축이 이산형일 때 점들을 랜덤하게 조금식 이동시켜 표현 
+ggplot(ChickWeight, aes(x = Time, y = weight)) + geom_point()
+
+
+--------------------------------------------------------------------------------------------------
+
+#geom_jitter()를 사용하여 겹침을 줄여줌(점들의 분포를 명확하게 나타내기 위해 사용
+ggplot(ChickWeight, aes(x = Time, y = weight)) + geom_jitter() # 이동 적용
+
+--------------------------------------------------------------------------------------------------
+
+# 적합된 회귀선 추가하기
+sp <- ggplot(ChickWeight, aes(x = Time, y = weight)) 
+sp + geom_point(color = "blue") + stat_smooth(method = lm, se = TRUE, color = "red") 
+
+--------------------------------------------------------------------------------------------------
+
+#geom_jitter 사용
+sp + geom_jitter(color = "blue") + stat_smooth(method = lm, se = TRUE, color = "red")
+
+
+--------------------------------------------------------------------------------------------------
+[나이와 키 사이의 관계]
+
+#그룹 별 회귀선 추가하기
+sps <- ggplot(heightweight, aes(x = ageYear, y = heightIn, color = sex)) + 
+  geom_point() + scale_color_brewer(palette = "Set1")
+sps + geom_smooth()
+--------------------------------------------------------------------------------------------------
+# 예측값 실제값 그래프로 표현하기 (함수)
+predictvals <- function(model, xvar, yvar, xrange = NULL, sample = 100, ...){
+  if(is.null(xrange)){
+    if(any(class(model) %in% c("lm", "glm")))
+      xrange <- range(model$model[[xvar]])
+    else if(any(class(model) %in% "loess"))
+      xrange <- range(model$x)
+  }
+  
+  newdata <- data.frame(x = seq(xrange[1], xrange[2], length.out = sample))
+  names(newdata) <- xvar
+  newdata[[yvar]] <- predict(model, newdata = newdata, ...)
+  newdata
+}
+
+modlinear <- lm(heightIn ~ ageYear, heightweight)
+modloess <- loess(heightIn ~ ageYear, heightweight)
+
+lm_predicted   <- predictvals(modlinear, "ageYear", "heightIn")
+loess_predicted <- predictvals(modloess, "ageYear", "heightIn")
+
+sp <- ggplot(heightweight, aes(x = ageYear, y = heightIn)) +
+  geom_point(color = "grey40")
+sp + geom_line(data = lm_predicted, color = "red", size = 0.8) +
+  geom_line(data = loess_predicted, color = "blue", size = 0.8)
+--------------------------------------------------------------------------------------------------
+
+[2009년도 건강지출과 유아사망률 사이의 관계]
+
+#산점도의 점에 라벨 붙이기
+sp <- ggplot(subset(countries, Year == 2009 & healthexp > 2000),
+             aes(x = healthexp, y = infmortality)) + geom_point()
+
+# 특정 값에 특정 단어로 라벨 붙이기
+sp + annotate("text", x = 4350, y = 5.4, label = "Canada") + 
+  annotate("text", x = 7400, y = 6.8, label = "USA")
+
+--------------------------------------------------------------------------------------------------
+
+# 데이터 값을 라벨로 붙이기(geom_text)
+sp + geom_text(aes(label = Name), size = 4)
+
+
+--------------------------------------------------------------------------------------------------
+
+# 라벨의 위치를 데이터값보다 조금 크게 설정
+sp + geom_text(aes(y = infmortality + 0.1, label = Name), size = 4, vjust = 0)
+
+--------------------------------------------------------------------------------------------------
+
+# 라벨이 점 옆에 오게 설정
+sp + geom_text(aes(x = healthexp + 100, label = Name), size = 4, hjust = 0)
+
+
+--------------------------------------------------------------------------------------------------
+
+# 특정 값만 라벨 붙이기
+cdat <- subset(countries, Year == 2009 & healthexp > 2000)
+cdat$Name1 <- cdat$Name 
+idx <- cdat$Name %in% c("Andorra", "France", "Canada") 
+cdat$Name1[!idx] <- NA
+ggplot(cdat, aes(x = healthexp, y = infmortality)) + geom_point() + geom_text(aes(y = infmortality + 0.1, label = Name1), size = 4, vjust = 0)
+
+--------------------------------------------------------------------------------------------------
+
+[머리색상과 눈색상 조합의 빈도]
+
+# 거품그래프(balloon plot)
+hec <- HairEyeColor[,,"Male"] + HairEyeColor[,,"Female"]
+hec <- melt(hec, value.name = "count") 
+ggplot(hec, aes(x = Eye, y = Hair)) + geom_point(aes(size = count), shape = 21, color = "black", fill = "cornsilk") + 
+  scale_size_area(max_size = 20, guide = FALSE) + 
+  geom_text(aes(y = as.numeric(Hair)-sqrt(count)/22, label = count), vjust = 1, color = "grey60", size = 4)
+
+--------------------------------------------------------------------------------------------------
+
+[2009년의 국가별 GDP, 노동률, 건강 지출, 유아 사망률에 대한 데이터를 사용하여 산점도 행렬 만들기]
+
+# 산점도 행렬 만들기
+c2009 <- subset(countries, Year == 2009, select = c(Name, GDP, laborrate, healthexp, infmortality)) 
+plot(c2009[,2:5])
+
+--------------------------------------------------------------------------------------------------
+
+#pairs() 함수를 사용하여 2009년 국가별 GDP, 노동률, 건강 지출, 유아 사망률 간의 모든 가능한 산점도 행렬을 만들기
+산점도 행렬의 대각선에는 히스토그램을, 산점도 행렬의 상단 삼각형에는 상관 계수를, 산점도 행렬의 하단 삼각형에는 LOWESS(평활선) 추가
+
+panel.hist <- function(x, ...)
+{
+  usr <- par("usr"); on.exit(par(usr))
+  par(usr = c(usr[1:2], 0, 1.5) )
+  h <- hist(x, plot = FALSE)
+  breaks <- h$breaks; nB <- length(breaks)
+  y <- h$counts; y <- y/max(y)
+  rect(breaks[-nB], 0, breaks[-1], y, col = "cyan", ...)
+}
+panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)
+{
+  usr <- par("usr"); on.exit(par(usr))
+  par(usr = c(0, 1, 0, 1))
+  r <- abs(cor(x, y))
+  txt <- format(c(r, 0.123456789), digits = digits)[1]
+  txt <- paste0(prefix, txt)
+  if(missing(cex.cor)) cex.cor <- 0.8/strwidth(txt)
+  text(0.5, 0.5, txt, cex = cex.cor * r)
+}
+panel.lm <- function(x, y, col = par("col"), bg = NA, pch = par("pch"), cex = 1, col.smooth = "black", ...){
+  points(x, y, pch = pch, col = col, bg = bg, cex = cex)
+  abline(stats::lm(y ~ x), col = col.smooth, ...)
+}
+# 데이터에 대한 LOWESS선(평활선) 추가 
+pairs(c2009[,2:5], pch = ".", upper.panel = panel.cor, diag.panel = panel.hist, lower.panel = panel.lm)
+
+--------------------------------------------------------------------------------------------------
+
+# 데이터에 대한 회귀적합선 추가 
+pairs(c2009[,2:5], pch = ".", upper.panel = panel.cor, diag.panel = panel.hist, lower.panel = panel.smooth)
+
+
+회귀적합선(regression line 또는 fitted line)은 회귀 분석에서 얻은 예측값을 나타내는 선입니다. 회귀 분석은 독립 변수(X)와 종속 변수(Y) 간의 관계를 설명하는 모델을 만드는 통계적 기법입니다. 회귀적합선은 이러한 회귀 분석 모델에서 독립 변수(X)와 종속 변수(Y) 간의 관계를 나타냅니다.
+
+회귀적합선은 회귀 분석 모델을 통해 얻은 예측값에 대응하는 값을 그래프 상에 표시합니다. 이를 통해 독립 변수(X)의 값에 따라 종속 변수(Y)의 예측값을 시각적으로 파악할 수 있습니다. 즉, 회귀적합선은 X와 Y 사이의 관계를 나타내는 추세선으로 해석될 수 있습니다.
+
+회귀적합선은 주어진 데이터에 가장 적합한 선형 모델이나 다항식 모델의 형태를 가지며, 회귀 분석 결과를 시각적으로 요약하고 예측하는 데 사용됩니다. 예를 들어, 산점도와 함께 회귀적합선을 그리면 데이터의 추세를 시각적으로 확인할 수 있고, 이를 통해 미래값을 예측할 수 있습니다
+
+--------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
