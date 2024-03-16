@@ -75,6 +75,7 @@ hist(means, xlab = 'mean_height', ylab = 'prob', main =
        'Distribution of means', prob = T)
 
 
+그래프 보러가기: https://github.com/infinite393/30-day-challenge-1/issues/2#issue-2190059917
 
 출처 <3일만에 끝내는 코딩+통계>
 
