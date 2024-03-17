@@ -46,11 +46,11 @@ curve(dnorm(x, 170, 15 / sqrt(sample_size)), 160, 180, add=T,
 시뮬레이션 횟수를 늘릴수록 곡선이 실제자료와 더 잘 들어맞게된다
 
 
+차트 이미지:
+https://github.com/infinite393/30-day-challenge-1/issues/3
 
 
-
-
-
+출처 <3일만에 끝내는 코딩+통계>
 
 
 
